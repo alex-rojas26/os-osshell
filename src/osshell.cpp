@@ -6,6 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include <unistd.h>
+#include <sys/wait.h>
 
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -39,12 +40,59 @@ int main (int argc, char **argv)
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
 
+    while(true){
+        std::cout << "osshell> ";
+        std::getline(std::cin, user_command);
+        if(user_command.empty()){
+            while(user_command.empty()){
+                std::cout << "osshell> ";
+                std::getline(std::cin, user_command);
+            }
+        }
+        if(user_command == "exit"){
+            return 0;
+            history.push_back("exit");
+        }
+        else if(user_command == "history"){
+            for(int i = 0; i < history.size(); i++){
+                std::cout << "  " << (i+1) << ": " << history[i] << std::endl;
+            }
+            history.push_back("history");
+        }
+        else{
+            bool foundPath = false;
+            splitString(user_command, ' ', command_list);
+            vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
+            for (int i = 0; i < os_path_list.size(); i++)
+            {
+                std::string path = os_path_list[i] + "/" + command_list[0];
+                //if you want to test this and the fileExecutableExists is not yet implemented
+                // put a i == 3 || before the fileExecut... and test with the ls command
+                if(fileExecutableExists(path)){
+                    foundPath = true;
+                    pid_t pid = fork();
+                    if(pid == 0){
+                        execv(path.c_str(), command_list_exec);
+                    }
+                    else if(pid > 0){
+                        wait(NULL);
+                    }
+                    break;
+                }
+            }
+            history.push_back(user_command);
+            if(!foundPath){
+                std::cout << "<" << user_command << ">: Error command not found" << std::endl;
+            }
+        }
+    }
 
-
+    
     /************************************************************************************
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
     // Shows how to loop over the directories in the PATH environment variable
+    /*
     int i;
     for (i = 0; i < os_path_list.size(); i++)
     {
@@ -81,10 +129,11 @@ int main (int argc, char **argv)
     // free memory for `command_list_exec`
     freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
     printf("------\n");
+    */
     /************************************************************************************
      *   End example code                                                               *
      ************************************************************************************/
-
+    
 
     return 0;
 }

@@ -1,0 +1,13 @@
+Jack-11:00 Tuesday
+    So all of the stuff in the "Basic Task" section should be done. The only exception to
+    this is that the history command will print more then 128 varables but I left that
+    for the person who is doing the advanced history command parameters. Also, I made a comment
+    in the code about this, but my implementation of this relies on the fileExecutableExists
+    function to be implemented and that is not yet implemented. I did testing by just changing
+    the if statement. If you two want to test this and the fileExecutableExists is not yet
+    implemented, just make the change I mentioned in the comment and test on the ls command.
+    It should work with parameters and everything. 
+    So in terms of what is left. Someone will need to add an if statement in the while true
+    loop to check the case if user input starts with . or /. And then some changes in the
+    if user_command == "history" block to make history persist between closing and also
+    allow for the parameters to the history command.
