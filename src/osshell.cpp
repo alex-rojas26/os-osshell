@@ -3,10 +3,13 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <filesystem>
 #include <unistd.h>
 #include <sys/wait.h>
+
+#include <sys/stat.h>
 
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -25,8 +28,12 @@ int main (int argc, char **argv)
 
     // Create variables for storing command user types
     std::string user_command;               // to store command user types in
+    std::string dotslash = "./";
     std::vector<std::string> command_list;  // to store `user_command` split into its variour parameters
     char **command_list_exec;               // to store `command_list` converted to an array of character arrays
+
+    //String stream to store history permenantly
+    std::stringstream buffer;
 
     // Welcome message
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
@@ -43,6 +50,8 @@ int main (int argc, char **argv)
     while(true){
         std::cout << "osshell> ";
         std::getline(std::cin, user_command);
+        buffer << user_command << "\n";
+
         if(user_command.empty()){
             while(user_command.empty()){
                 std::cout << "osshell> ";
@@ -59,7 +68,30 @@ int main (int argc, char **argv)
             }
             history.push_back("history");
         }
-        else{
+        //Executable
+        else if(user_command[0] == dotslash[0] || user_command[0] == dotslash[1]) {
+            // std::cout << "local command" << std::endl;
+            std::string path = user_command;
+            bool foundPath = false;
+                //if you want to test this and the fileExecutableExists is not yet implemented
+                // put a i == 3 || before the fileExecut... and test with the ls command
+            if(fileExecutableExists(path)){
+                    // std::cout << path << " exists"<< std::endl;
+                    foundPath = true;
+                    pid_t pid = fork();
+                    if(pid == 0){
+                        execv(path.c_str(), command_list_exec);
+                    }
+                    else if(pid > 0){
+                        wait(NULL);
+                    }
+                    break;
+                }
+            if(!foundPath){
+                std::cout << "<" << user_command << ">: Error command not found" << std::endl;
+            }
+        }
+        else {
             bool foundPath = false;
             splitString(user_command, ' ', command_list);
             vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
@@ -134,19 +166,34 @@ int main (int argc, char **argv)
      *   End example code                                                               *
      ************************************************************************************/
     
+    //txt file with all inputs
+    std::ofstream outputFile("input_history.txt");
+    if (outputFile.is_open()) {
+        outputFile << buffer.str();
+        outputFile.close();
+    }
 
     return 0;
 }
 
 /*
    file_path: path to a file
-   RETURN: true/false - whether or not that file exists and is executable
+   RETURN: true/false - whether or not that file exists AND is executable
 */
 bool fileExecutableExists(std::string file_path)
-{
+{   
     bool exists = false;
+    struct stat fileproperties;
     // check if `file_path` exists
-    // if so, ensure it is not a directory and that it has executable permissions
+    // if so, ensure it is not a directory and that it has executable permission
+    // how to check for executable permission
+    if (stat(file_path.c_str(), &fileproperties) == 0) {
+        // std::cout << "first" << std::endl;
+        if (fileproperties.st_mode & S_IXUSR) {
+            // std::cout << "second" << std::endl;
+            exists = true;
+        }
+    }
 
     return exists;
 }

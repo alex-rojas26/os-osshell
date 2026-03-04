@@ -11,3 +11,22 @@ Jack-11:00 Tuesday
     loop to check the case if user input starts with . or /. And then some changes in the
     if user_command == "history" block to make history persist between closing and also
     allow for the parameters to the history command.
+
+Alex-4:00 PM Wednesday
+    New files:
+        input_history.txt   contains all lines of history
+        ./bin/hello           used to test executables
+    New code:
+        Lines 169-174
+            Creates a txt file for all inputs
+        Lines 71-94
+            If user input starts with a dot (.) or slash (/), checks if command is an executable
+            
+            If so, spawns a new process to run that executable, and wait for its completion (i.e. fork() and exec())
+            If not, print the following error message:
+                "<command>: Error command not found"
+    Bugs:
+        I think it's having issues with the fork() and exec(), I will work on fixing this.
+
+    The last part of this assignment involves opening the input_history.txt file
+    and parsing through each line. Best of luck and thank you for your time.
