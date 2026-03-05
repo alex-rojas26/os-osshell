@@ -68,7 +68,6 @@ int main (int argc, char **argv)
         if(user_command == "exit"){
             if(history.size() == 128) history.erase(history.begin());
             history.push_back("exit");
-            buffer << "exit\n";
             std::cout << std::endl;
             break; // quit shell
         }
@@ -142,7 +141,7 @@ int main (int argc, char **argv)
                     }
                 }
             else{
-                std::cout << "<" << user_command << ">: Error command not found" << std::endl;
+                std::cout << user_command << ": Error command not found" << std::endl;
             }
             if(history.size() == 128) history.erase(history.begin());
             history.push_back(user_command);
@@ -171,7 +170,7 @@ int main (int argc, char **argv)
                 }
             }
             if(!foundPath){
-                std::cout << "<" << user_command << ">: Error command not found" << std::endl;
+                std::cout << user_command << ": Error command not found" << std::endl;
                 freeArrayOfCharArrays(command_list_exec, command_list.size()+1);
             }
             if(history.size() == 128) history.erase(history.begin());

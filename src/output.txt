@@ -1,15 +1,14 @@
 Welcome to OSShell! Please enter your commands ('exit' to quit).
 osshell> /usr/bin/grep
-osshell>   1: head -n 1 Makefile
-  2: history
-  3: exit
-  4: which grep
-osshell> <badexe>: Error command not found
+osshell>   1: which grep
+  2: exit
+  3: which grep
+osshell> badexe: Error command not found
 osshell> Hello there!
 osshell> Error: history expects an integer > 0 (or 'clear')
-osshell>   6: badexe
-  7: echo "Hello there!"
-  8: history 3x
+osshell>   5: badexe
+  6: echo "Hello there!"
+  7: history 3x
 osshell> ./osshell.cpp
 osshell> osshell> CXX= g++
 osshell>   1: head -n 1 Makefile
