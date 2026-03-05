@@ -1,0 +1,4 @@
+head -n 1 Makefile
+history
+exit
+exit

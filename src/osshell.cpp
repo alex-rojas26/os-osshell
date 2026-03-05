@@ -8,8 +8,8 @@
 #include <filesystem>
 #include <unistd.h>
 #include <sys/wait.h>
-
 #include <sys/stat.h>
+#include <cctype>
 
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -26,6 +26,16 @@ int main (int argc, char **argv)
     // Create list to store history
     std::vector<std::string> history;
 
+    // Load history from file if it exists
+    std::ifstream inputFile("input_history.txt");
+    std::string line;
+    while(inputFile && std::getline(inputFile, line)){
+        if(!line.empty()){
+            history.push_back(line);
+        }
+    }
+    inputFile.close();
+
     // Create variables for storing command user types
     std::string user_command;               // to store command user types in
     std::string dotslash = "./";
@@ -34,6 +44,7 @@ int main (int argc, char **argv)
 
     //String stream to store history permenantly
     std::stringstream buffer;
+    for(const auto& h : history) buffer << h << "\n";
 
     // Welcome message
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
@@ -50,54 +61,100 @@ int main (int argc, char **argv)
     while(true){
         std::cout << "osshell> ";
         std::getline(std::cin, user_command);
+        if(user_command.empty()) continue;
+
         buffer << user_command << "\n";
 
-        if(user_command.empty()){
-            while(user_command.empty()){
-                std::cout << "osshell> ";
-                std::getline(std::cin, user_command);
-            }
-        }
         if(user_command == "exit"){
-            return 0;
+            if(history.size() == 128) history.erase(history.begin());
             history.push_back("exit");
+            buffer << "exit\n";
+            std::cout << std::endl;
+            break; // quit shell
         }
-        else if(user_command == "history"){
-            for(int i = 0; i < history.size(); i++){
-                std::cout << "  " << (i+1) << ": " << history[i] << std::endl;
+        //history with optional parameter
+        if(user_command.rfind("history",0) == 0){
+            splitString(user_command, ' ', command_list);
+
+            if(command_list.size() == 1){
+                // Print all history
+                int start = (history.size() > 128) ? history.size() - 128 : 0;
+                for(int i=start; i<history.size(); i++){
+                    std::cout << "  " << (i+1) << ": " << history[i] << std::endl;
+                }
+                if(history.size() == 128) history.erase(history.begin());
+                history.push_back(user_command);
             }
-            history.push_back("history");
+            else if(command_list.size() == 2){
+                std::string arg = command_list[1];
+                if(arg == "clear"){
+                    history.clear(); // don't log "history clear" command
+                    buffer.str(""); // clear file buffer
+                    buffer.clear();
+                    continue;
+                }
+                else{
+                    bool validNumber = true;
+                    for(char c : arg) if(!isdigit(c)) validNumber = false;
+
+                    if(!validNumber){
+                        std::cout << "Error: history expects an integer > 0 (or 'clear')" << std::endl;
+                        if(history.size() == 128) history.erase(history.begin());
+                        history.push_back(user_command);
+                        continue;
+                    }
+                    int n = std::stoi(arg);
+                    if(n <= 0){
+                        std::cout << "Error: history expects an integer > 0 (or 'clear')" << std::endl;
+                        if(history.size() == 128) history.erase(history.begin());
+                        history.push_back(user_command);
+                        continue;
+                    }
+                    int start = (history.size() > n) ? history.size() - n : 0;
+                    for(int i=start; i<history.size(); i++){
+                        std::cout << "  " << (i+1) << ": " << history[i] << std::endl;
+                    }
+                    if(history.size() == 128) history.erase(history.begin());
+                    history.push_back(user_command);
+                }
+            }
+            else{
+                std::cout << "Error: history expects an integer > 0 (or 'clear')" << std::endl;
+                if(history.size() == 128) history.erase(history.begin());
+                history.push_back(user_command);
+            }
         }
         //Executable
-        else if(user_command[0] == dotslash[0] || user_command[0] == dotslash[1]) {
+        else if(user_command.find('/') != std::string::npos) {
+            splitString(user_command, ' ', command_list);
+            vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
             // std::cout << "local command" << std::endl;
-            std::string path = user_command;
-            bool foundPath = false;
-                //if you want to test this and the fileExecutableExists is not yet implemented
-                // put a i == 3 || before the fileExecut... and test with the ls command
+            std::string path = command_list[0];
             if(fileExecutableExists(path)){
                     // std::cout << path << " exists"<< std::endl;
-                    foundPath = true;
                     pid_t pid = fork();
                     if(pid == 0){
                         execv(path.c_str(), command_list_exec);
                     }
                     else if(pid > 0){
                         wait(NULL);
+                        freeArrayOfCharArrays(command_list_exec, command_list.size()+1);
                     }
-                    break;
                 }
-            if(!foundPath){
+            else{
                 std::cout << "<" << user_command << ">: Error command not found" << std::endl;
             }
+            if(history.size() == 128) history.erase(history.begin());
+            history.push_back(user_command);
         }
         else {
-            bool foundPath = false;
             splitString(user_command, ' ', command_list);
             vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-            for (int i = 0; i < os_path_list.size(); i++)
+
+            bool foundPath = false;
+            for (const auto& dir : os_path_list)
             {
-                std::string path = os_path_list[i] + "/" + command_list[0];
+                std::string path = dir + "/" + command_list[0];
                 //if you want to test this and the fileExecutableExists is not yet implemented
                 // put a i == 3 || before the fileExecut... and test with the ls command
                 if(fileExecutableExists(path)){
@@ -108,14 +165,17 @@ int main (int argc, char **argv)
                     }
                     else if(pid > 0){
                         wait(NULL);
+                        freeArrayOfCharArrays(command_list_exec, command_list.size()+1);
                     }
                     break;
                 }
             }
-            history.push_back(user_command);
             if(!foundPath){
                 std::cout << "<" << user_command << ">: Error command not found" << std::endl;
+                freeArrayOfCharArrays(command_list_exec, command_list.size()+1);
             }
+            if(history.size() == 128) history.erase(history.begin());
+            history.push_back(user_command);
         }
     }
 
@@ -189,7 +249,7 @@ bool fileExecutableExists(std::string file_path)
     // how to check for executable permission
     if (stat(file_path.c_str(), &fileproperties) == 0) {
         // std::cout << "first" << std::endl;
-        if (fileproperties.st_mode & S_IXUSR) {
+        if (!S_ISDIR(fileproperties.st_mode) && (fileproperties.st_mode & S_IXUSR)) {
             // std::cout << "second" << std::endl;
             exists = true;
         }
